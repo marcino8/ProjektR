@@ -119,6 +119,7 @@ server <- function(input, output, session) {
       
   })
   observeEvent(input$map_marker_click,{
+    
     t<-paste(t,input$map_marker_click$id, sep=" ")
     print(t)
     output$info<-renderText({
