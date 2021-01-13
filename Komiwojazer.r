@@ -21,17 +21,19 @@ Macierz_odleglosci[,15]=c(353,45,179,286,353,302,380,370,156,181,302,147,468,308
 Macierz_odleglosci[,16]=c(191,257,346,437,294,180,299,226,134,220,310,304,302,517,209,0,341,413)
 Macierz_odleglosci[,17]=c(541,265,481,197,311,256,424,207,445,85,173,418,367,280,209,341,0,156)
 Macierz_odleglosci[,18]=c(600,261,415,105,353,452,473,541,302,467,241,132,626,215,279,413,156,0)
-city_coords<-matrix(1:54, ncol=3, byrow=TRUE)
-colnames(city_coords)<-c("Miasto","X","Y")
+city_coords<-matrix(1:72, ncol=4, byrow=TRUE)
+colnames(city_coords)<-c("Miasto","X","Y", "ID")
 city_coords[,1] <- c("Bialystok","Bydgoszcz","Gdańsk","Gorzów Wielkopolski","Katowice","Kielce","Kraków","Lublin","Łódz","Olsztyn","Opole",  "Poznań", "Rzeszów","Szczecin","Toruń","Warszawa","Wroclaw","Zielona Góra")
 city_coords[,2] <- c(23.0844,     18.00,      18.667,    15.25 ,               19.023,  20.6167, 19.944,  22.552,  19.448, 20.46,   17.911,   16.921,   22.01,    14.546,    18.61,   21.014,     17.039,     15.50)
 city_coords[,3] <- c(53.0807,     53.15,      54.35,     52.733,               50.264,  50.8833, 50.057,  51.252,  51.76,  53.77,   50.674,   52.405,   50.03,    53.441,    53.018,  52.241,     51.105,     51.94)
+city_coords[,4] <- 1:18
 city_coords <-as.data.frame(city_coords)
 city_coords$X<-as.numeric(city_coords$X)
 city_coords$Y<-as.numeric(city_coords$Y)
+city_coords$ID<-as.numeric(city_coords$ID)
 typeof(city_coords$X)
 typeof(city_coords$Y)
-
+t<-""
 library("ompr")
 library("knitr")
 library("dplyr")
@@ -75,25 +77,64 @@ solution <- get_solution(result, x[i, j]) %>%
   filter(value > 0) 
 kable(head(solution, 3))
 
+
+#SHINY SECTION
 library(shiny)
 library(leaflet)
 library(RColorBrewer)
-ui <- bootstrapPage(
-  tags$style(type = "text/css", "html, body {width:100%;height:100%}"),
-  leafletOutput("map", width = "100%", height = "100%"),
-  absolutePanel(top = 10, right = 10
+#SHINY UI
+ui <- fluidPage(
+  titlePanel("Problem komwojażera"),
+  
+  # main panel
+  mainPanel(
+    leafletOutput("map"),
+    actionButton("btn_click", label="Odznacz"),
+    actionButton("btn2_click", label="Oblicz trase"),
+    #textAreaInput("textarea", "Type some text to be printed"),
+    textOutput("info"),
+    #absolutePanel(top=100, right=40, fixed = FALSE,
+    #              tags$div(style="opacity: 0.7; background: #FFFFEE; padding: 8px; ",
+    #                       helpText("Witaj na mapie Polski"),
+    #                       textOutput("text")
+    #              )
+    #)
+    dataTableOutput("table")
   )
+    
 )
+#SHINY SERVER
 server <- function(input, output, session) {
+  
 
+  wybrane <-  reactive({
+    
+    subset <- subset(city_coords, city_coords$ID==input$map_marker_click$id)
+  })
   
   output$map <- renderLeaflet({
     leaflet(city_coords) %>% addTiles() %>%
       fitBounds(~min(18.012100), ~min(49.985842), ~max(20.846025), ~max(54.435947)) %>% #Wymiary Polski
-      addMarkers(~X, ~Y, popup = ~as.character(Miasto), label = ~as.character(Miasto))
+      addMarkers(~X, ~Y, popup = ~as.character(Miasto), layerId = city_coords$ID)
       
   })
-
+  observeEvent(input$map_marker_click,{
+    p <- input$map_marker_click$id
+    print(p)
+  })
+  observeEvent(input$btn_click,{###################################################
+    output$info<-renderText({paste0("0")})
+  })
+  observeEvent(input$btn2_click,{
+    print("klika sie2")
+    
+  })
+  output$table1 <- renderDataTable({
+    DT::datatable(wybrane, selection = "single", options=list(stateSave = TRUE))
+  })
+  output$info <- renderText({####################################################
+      paste0(input$map_marker_click$id)
+  })
 }
 
 shinyApp(ui, server)
