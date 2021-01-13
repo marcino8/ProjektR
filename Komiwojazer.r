@@ -21,11 +21,22 @@ Macierz_odleglosci[,15]=c(353,45,179,286,353,302,380,370,156,181,302,147,468,308
 Macierz_odleglosci[,16]=c(191,257,346,437,294,180,299,226,134,220,310,304,302,517,209,0,341,413)
 Macierz_odleglosci[,17]=c(541,265,481,197,311,256,424,207,445,85,173,418,367,280,209,341,0,156)
 Macierz_odleglosci[,18]=c(600,261,415,105,353,452,473,541,302,467,241,132,626,215,279,413,156,0)
+city_coords<-matrix(1:54, ncol=3, byrow=TRUE)
+colnames(city_coords)<-c("Miasto","X","Y")
+city_coords[,1] <- c("Bialystok","Bydgoszcz","Gdańsk","Gorzów Wielkopolski","Katowice","Kielce","Kraków","Lublin","Łódz","Olsztyn","Opole","Poznań","Rzeszów","Szczecin","Toruń","Warszawa","Wroclaw","Zielona Góra")
+city_coords[,2] <- c(23.10,18.00,18.38,15.14,19.00,20.37,19.57,22.34,19.28,20.30,17.56,16.55,22.01,14.34,18.37,21.02,17.02,15.30)
+city_coords[,3] <- c(53.08,53.07,54.22,52.44,50.15,50.53,50.03,51.14,51.47,53.47,50.40,52.25,50.03,53.26,53.02,52.12,51.07,51.56)
+city_coords <-as.data.frame(city_coords)
+city_coords$X<-as.numeric(city_coords$X)
+city_coords$Y<-as.numeric(city_coords$Y)
+typeof(city_coords$X)
+typeof(city_coords$Y)
+
 library("ompr")
 library("knitr")
 library("dplyr")
 library(ggplot2)
-quakes
+
 dist_fun <- function(i, j) {
   vapply(seq_along(i), function(k) Macierz_odleglosci[i[k], j[k]], numeric(1L))
 }
@@ -67,7 +78,6 @@ kable(head(solution, 3))
 library(shiny)
 library(leaflet)
 library(RColorBrewer)
-head(quakes)
 ui <- bootstrapPage(
   tags$style(type = "text/css", "html, body {width:100%;height:100%}"),
   leafletOutput("map", width = "100%", height = "100%"),
@@ -78,9 +88,10 @@ server <- function(input, output, session) {
 
   
   output$map <- renderLeaflet({
-    leaflet(quakes) %>% addTiles() %>%
+    leaflet(city_coords) %>% addTiles() %>%
       fitBounds(~min(18.012100), ~min(49.985842), ~max(20.846025), ~max(54.435947)) %>% #Wymiary Polski
-      addMarkers(lng=19.768, lat=51.852, popup="Tu jakies miasto")
+      addMarkers(~X, ~Y, popup = ~as.character(Miasto), label = ~as.character(Miasto))
+      
   })
 
 }
