@@ -105,7 +105,7 @@ ui <- fluidPage(
 )
 #SHINY SERVER
 server <- function(input, output, session) {
-  
+  t<-""
 
   wybrane <-  reactive({
     
@@ -119,11 +119,14 @@ server <- function(input, output, session) {
       
   })
   observeEvent(input$map_marker_click,{
-    p <- input$map_marker_click$id
-    print(p)
+    t<-paste(t,input$map_marker_click$id, sep=" ")
+    print(t)
+    output$info<-renderText({
+      paste0(t)
+  })
   })
   observeEvent(input$btn_click,{###################################################
-    output$info<-renderText({paste0("0")})
+    output$info<-renderText({paste0("")})
   })
   observeEvent(input$btn2_click,{
     print("klika sie2")
@@ -132,9 +135,7 @@ server <- function(input, output, session) {
   output$table1 <- renderDataTable({
     DT::datatable(wybrane, selection = "single", options=list(stateSave = TRUE))
   })
-  output$info <- renderText({####################################################
-      paste0(input$map_marker_click$id)
-  })
+  
 }
 
 shinyApp(ui, server)
