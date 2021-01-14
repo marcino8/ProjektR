@@ -3,6 +3,8 @@ liczba_miast<- 18
 Macierz_odleglosci<-matrix(1:324 ,nrow = liczba_miast ,ncol=liczba_miast)
 rownames(Macierz_odleglosci)<-c("Bialystok","Bydgoszcz","Gdańsk","Gorzów Wielkopolski","Katowice","Kielce","Kraków","Lublin","Łódz","Olsztyn","Opole","Poznań","Rzeszów","Szczecin","Toruń","Warszawa","Wroclaw","Zielona Góra")
 colnames(Macierz_odleglosci)<-c("Bialystok","Bydgoszcz","Gdańsk","Gorzów Wielkopolski","Katowice","Kielce","Kraków","Lublin","Łódz","Olsztyn","Opole","Poznań","Rzeszów","Szczecin","Toruń","Warszawa","Wroclaw","Zielona Góra")
+
+#Reczne wprowadzenie macierzy odleglosci
 Macierz_odleglosci[,1]=c(0,398,387,622,487,373,470,261,327,142,502,480,422,649,353,191,541,600)
 Macierz_odleglosci[,2]=c(398,0,170,224,378,349,452,419,203,201,323,129,523,260,45,257,265,261)
 Macierz_odleglosci[,3]=c(387,170,0,318,525,470,584,509,330,165,514,304,655,318,179,346,481,415)
@@ -21,6 +23,8 @@ Macierz_odleglosci[,15]=c(353,45,179,286,353,302,380,370,156,181,302,147,468,308
 Macierz_odleglosci[,16]=c(191,257,346,437,294,180,299,226,134,220,310,304,302,517,209,0,341,413)
 Macierz_odleglosci[,17]=c(541,265,481,197,311,256,424,207,445,85,173,418,367,280,209,341,0,156)
 Macierz_odleglosci[,18]=c(600,261,415,105,353,452,473,541,302,467,241,132,626,215,279,413,156,0)
+
+#Wprowadzenie koordynatow do dzialania markerow na mapie i oblicznia odleglosci
 city_coords<-matrix(1:72, ncol=4, byrow=TRUE)
 colnames(city_coords)<-c("Miasto","X","Y", "ID")
 city_coords[,1] <- c("Bialystok","Bydgoszcz","Gdańsk","Gorzów Wielkopolski","Katowice","Kielce","Kraków","Lublin","Łódz","Olsztyn","Opole",  "Poznań", "Rzeszów","Szczecin","Toruń","Warszawa","Wroclaw","Zielona Góra")
@@ -36,39 +40,47 @@ library("knitr")
 library("dplyr")
 library(ggplot2)
 
+#Funkcja obliczjakaca dystans miedzy miastami, korzystajaca 
+#z recznie wprowadzonej macierzy odleglosci miedzy miastami
 dist_fun <- function(i, j) {
   vapply(seq_along(i), function(k) Macierz_odleglosci[i[k], j[k]], numeric(1L))
 }
 
+#Model rozwiazanie problemu komiwojażera
 model <- MIPModel() %>%
-  # we create a variable that is 1 iff we travel from city i to j
+  #Stworzenie zmiennej o wartoci 1 dla podrozy z miasta i do j
   add_variable(x[i, j], i = 1:liczba_miast, j = 1:liczba_miast, 
                type = "integer", lb = 0, ub = 1) %>%
   
-  # a helper variable for the MTZ formulation of the tsp
+  #zmienna pomocnicza
   add_variable(u[i], i = 1:liczba_miast, lb = 1, ub = liczba_miast) %>% 
   
-  # minimize travel distance
+  #Minimalizacja odleglosci
   set_objective(sum_expr(dist_fun(i, j) * x[i, j], i = 1:liczba_miast, j = 1:liczba_miast), "min") %>%
   
-  # you cannot go to the same city
+  #Dodajemy warunki
+  #Nie mozna przejechac przez miasto dwa rady
   set_bounds(x[i, i], ub = 0, i = 1:liczba_miast) %>%
   
-  # leave each city
+  # Trzeba opuscic kazde miasto
   add_constraint(sum_expr(x[i, j], j = 1:liczba_miast) == 1, i = 1:liczba_miast) %>%
   #
-  # visit each city
+  #Trzeba byc w kazdym miescie
   add_constraint(sum_expr(x[i, j], i = 1:liczba_miast) == 1, j = 1:liczba_miast) %>%
   
-  # ensure no subtours (arc constraints)
+  #Brak mozliwosci tworzenia "drogi na skroty"
   add_constraint(u[i] >= 2, i = 2:liczba_miast) %>% 
   add_constraint(u[i] - u[j] + 1 >= (liczba_miast - 1) * (1 - x[i, j]), i = 2:liczba_miast, j = 2:liczba_miast)
 model
 
+#Obliczenie macierzy odleglosci z podanych wspolrzednych geograficznych
+Odleglosc <- as.matrix(stats::dist(select(city_coords, X, Y), diag = TRUE, upper = TRUE))
 
 library("ompr.roi")
 library("ROI.plugin.glpk")
 
+
+#Przykladowe rozwiazanie, test dzialania
 result <- solve_model(model,   with_ROI(solver = "glpk", verbose = TRUE))
 solution <- get_solution(result, x[i, j]) %>% 
   filter(value > 0) 
@@ -82,13 +94,16 @@ kable(head(solution, 3))
   inner_join(city_coords, by = c("idx_val" = "ID"))
 kable(head(arrange(drogi,id_podrozy), 4))
 
+
+################################################
+
 #SHINY SECTION
 library(shiny)
 library(leaflet)
 library(RColorBrewer)
-#SHINY UI
+########################SHINY UI############################
 ui <- fluidPage(
-  titlePanel("Problem komwojażera"),
+  titlePanel("Problem komiwojażera"),
   mainPanel(
     leafletOutput("map"),
     fluidRow(
@@ -103,26 +118,28 @@ ui <- fluidPage(
   textOutput("txf")
 )
 )
-#SHINY SERVER
+###################SHINY SERVER################################
 server <- function(input, output, session) {
-
+  #Stworzenie mapy i dodanie na niej markerow odpowiadajacych miastom
   output$map <- renderLeaflet({
     leaflet(city_coords) %>% addTiles() %>%
-      fitBounds(~min(18.012100), ~min(49.985842), ~max(20.846025), ~max(54.435947)) %>% #Wymiary Polski
-      addMarkers(~X, ~Y, popup = ~as.character(Miasto), layerId = city_coords$ID)
+      #ustawienie mapy na Polske przy starcie programu
+      fitBounds(~min(18.012100), ~min(49.985842), ~max(20.846025), ~max(54.435947)) %>% 
+      addMarkers(~X, ~Y, popup = ~as.character(Miasto), layerId = city_coords$ID, label=city_coords$Miasto)
       
   })
+  #Obliczanie odleglosci i wypisywanie informacji zwrotnej uzytkownikowi
   observeEvent(input$btn2_click,{
     isolate({
       miasta <- subset(city_coords, Miasto %in% input$cities)
       #### W TYM MIEJSCU WYWOŁAĆ SOLVER OD miasta i wypisać niżej
-      #### MOZNA ZROBIC PODSWIETLENIE MARKEROW ZAZNACOZNYCH MIAST
+
       output$txf<-renderText({
-        paste0("Najkrótsza odlegosc: ")
+        paste0("Najkrótsza odlegosc: ", )####TU DOPISAC WYNIK
       })
     })
   })
   
 }
-
+#Start aplikacji
 shinyApp(ui, server)
