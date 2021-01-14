@@ -31,9 +31,6 @@ city_coords <-as.data.frame(city_coords)
 city_coords$X<-as.numeric(city_coords$X)
 city_coords$Y<-as.numeric(city_coords$Y)
 city_coords$ID<-as.numeric(city_coords$ID)
-typeof(city_coords$X)
-typeof(city_coords$Y)
-t<-""
 library("ompr")
 library("knitr")
 library("dplyr")
@@ -85,8 +82,6 @@ library(RColorBrewer)
 #SHINY UI
 ui <- fluidPage(
   titlePanel("Problem komwojażera"),
-  
-  # main panel
   mainPanel(
     leafletOutput("map"),
     fluidRow(
@@ -94,10 +89,9 @@ ui <- fluidPage(
              p("Wybierz miasta"),
              selectizeInput("cities", "MIASTA", city_coords$Miasto, multiple=TRUE, width="100%",
                             options = list(maxItems=18, maxOptions=100, placeholder="Wpisz aby wybrać",
-                                           selectOnTab=TRUE, openOnFocus=FALSE, hideSelected=TRUE)),
-
+                            selectOnTab=TRUE, openOnFocus=FALSE, hideSelected=TRUE)),
       )
-  ),
+    ),
   actionButton("btn2_click", label="Oblicz trase"),
   textOutput("txf")
 )
@@ -105,28 +99,19 @@ ui <- fluidPage(
 #SHINY SERVER
 server <- function(input, output, session) {
 
-  wybrane <-  reactive({
-    
-    subset <- subset(city_coords, city_coords$ID==input$map_marker_click$id)
-  })
-  
   output$map <- renderLeaflet({
     leaflet(city_coords) %>% addTiles() %>%
       fitBounds(~min(18.012100), ~min(49.985842), ~max(20.846025), ~max(54.435947)) %>% #Wymiary Polski
       addMarkers(~X, ~Y, popup = ~as.character(Miasto), layerId = city_coords$ID)
       
   })
-  observeEvent(input$map_marker_click,{
-    
-    t<-paste(t,input$map_marker_click$id, sep=" ")
-    print(t)
-  })
   observeEvent(input$btn2_click,{
     isolate({
       miasta <- subset(city_coords, Miasto %in% input$cities)
       #### W TYM MIEJSCU WYWOŁAĆ SOLVER OD miasta i wypisać niżej
+      #### MOZNA ZROBIC PODSWIETLENIE MARKEROW ZAZNACOZNYCH MIAST
       output$txf<-renderText({
-        paste0("miasta"Najkrótsza odlego)
+        paste0("Najkrótsza odlegosc: ")
       })
     })
   })
