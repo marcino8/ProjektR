@@ -74,6 +74,13 @@ solution <- get_solution(result, x[i, j]) %>%
   filter(value > 0) 
 kable(head(solution, 3))
 
+         drogi <- select(solution, i, j) %>% 
+  rename(from = i, to = j) %>% 
+  mutate(id_podrozy=row_number()) %>% 
+  tidyr::gather(property, idx_val, from:to) %>% 
+  mutate(idx_val = as.integer(idx_val)) %>% 
+  inner_join(city_coords, by = c("idx_val" = "ID"))
+kable(head(arrange(drogi,id_podrozy), 4))
 
 #SHINY SECTION
 library(shiny)
