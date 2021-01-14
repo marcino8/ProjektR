@@ -89,23 +89,21 @@ ui <- fluidPage(
   # main panel
   mainPanel(
     leafletOutput("map"),
-    actionButton("btn_click", label="Odznacz"),
-    actionButton("btn2_click", label="Oblicz trase"),
-    #textAreaInput("textarea", "Type some text to be printed"),
-    textOutput("info"),
-    #absolutePanel(top=100, right=40, fixed = FALSE,
-    #              tags$div(style="opacity: 0.7; background: #FFFFEE; padding: 8px; ",
-    #                       helpText("Witaj na mapie Polski"),
-    #                       textOutput("text")
-    #              )
-    #)
-    dataTableOutput("table")
-  )
-    
+    fluidRow(
+      column(5,
+             p("Wybierz miasta"),
+             selectizeInput("cities", "MIASTA", city_coords$Miasto, multiple=TRUE, width="100%",
+                            options = list(maxItems=18, maxOptions=100, placeholder="Wpisz aby wybrać",
+                                           selectOnTab=TRUE, openOnFocus=FALSE, hideSelected=TRUE)),
+
+      )
+  ),
+  actionButton("btn2_click", label="Oblicz trase"),
+  textOutput("txf")
+)
 )
 #SHINY SERVER
 server <- function(input, output, session) {
-  t<-""
 
   wybrane <-  reactive({
     
@@ -122,19 +120,15 @@ server <- function(input, output, session) {
     
     t<-paste(t,input$map_marker_click$id, sep=" ")
     print(t)
-    output$info<-renderText({
-      paste0(t)
-  })
-  })
-  observeEvent(input$btn_click,{###################################################
-    output$info<-renderText({paste0("")})
   })
   observeEvent(input$btn2_click,{
-    print("klika sie2")
-    
-  })
-  output$table1 <- renderDataTable({
-    DT::datatable(wybrane, selection = "single", options=list(stateSave = TRUE))
+    isolate({
+      miasta <- subset(city_coords, Miasto %in% input$cities)
+      #### W TYM MIEJSCU WYWOŁAĆ SOLVER OD miasta i wypisać niżej
+      output$txf<-renderText({
+        paste0("miasta"Najkrótsza odlego)
+      })
+    })
   })
   
 }
